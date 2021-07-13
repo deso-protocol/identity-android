@@ -3,7 +3,7 @@
     package="com.bitclout.identity">
 
     <application>
-        <activity android:name="com.bitclout.identity.LoginActivity">
+        <activity android:name="com.bitclout.identity.views.LoginActivity">
             <intent-filter >
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

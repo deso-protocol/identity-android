@@ -2,7 +2,7 @@ package com.bitclout.identitydemo
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import com.bitclout.identity.LoginActivity
+import com.bitclout.identity.views.LoginActivity
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
