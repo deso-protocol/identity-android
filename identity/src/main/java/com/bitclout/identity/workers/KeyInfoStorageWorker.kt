@@ -21,34 +21,34 @@ class KeyInfoStorageWorker constructor(applicationContext: Context) {
 
     fun saveDerivedKeyInfo(derivedKeyInfo: DerivedKeyInfo) {
         with(sharedPreferences.edit()) {
-            putString(TRUE_PUBLIC_KEY, derivedKeyInfo.truePublicKey)
-            putString(NEW_PUBLIC_KEY, derivedKeyInfo.newPublicKey)
-            putString(NEW_PRIVATE_KEY, derivedKeyInfo.newPrivateKey)
-            putString(SIGNED_HASH, derivedKeyInfo.signedHash)
-            putString(JWT, derivedKeyInfo.jwt)
+            putString(derivedKeyInfo.truePublicKey, derivedKeyInfo.jsonString())
             apply()
         }
     }
 
-    fun loadDerivedKeyInfo(): DerivedKeyInfo? {
-        with(sharedPreferences) {
-            return DerivedKeyInfo.fromOptionalParameters(
-                getString(TRUE_PUBLIC_KEY, null),
-                getString(NEW_PUBLIC_KEY, null),
-                getString(NEW_PRIVATE_KEY, null),
-                getString(SIGNED_HASH, null),
-                getString(JWT, null)
-            )
+    fun removeDerivedKeyInfo(truePublicKey: String) {
+        with(sharedPreferences.edit()) {
+            remove(truePublicKey)
+            apply()
         }
     }
+
+    fun loadDerivedKeyInfo(truePublicKey: String): DerivedKeyInfo? {
+        with(sharedPreferences) {
+            val jsonString = getString(truePublicKey, null)
+            return jsonString?.let { DerivedKeyInfo.fromJSONString(it) }
+        }
+    }
+
+    fun setStoredKeys(publicKeys: List<String>) = sharedPreferences.edit().putStringSet(PUBLIC_KEYS, publicKeys.toSet()).apply()
+
+    fun getAllStoredKeys(): List<String> = sharedPreferences.getStringSet(PUBLIC_KEYS, emptySet())?.toList() ?: emptyList()
+
+    fun clearAllStoredInfo() = sharedPreferences.edit().clear().apply()
 
     companion object {
         internal const val PREF_FILE_NAME = "bitclout_identity_pref_file"
 
-        internal const val TRUE_PUBLIC_KEY = "TRUE_PUBLIC_KEY"
-        internal const val NEW_PUBLIC_KEY = "NEW_PUBLIC_KEY"
-        internal const val NEW_PRIVATE_KEY = "NEW_PRIVATE_KEY"
-        internal const val SIGNED_HASH = "SIGNED_HASH"
-        internal const val JWT = "JWT"
+        internal const val PUBLIC_KEYS = "PUBLIC_KEYS"
     }
 }
