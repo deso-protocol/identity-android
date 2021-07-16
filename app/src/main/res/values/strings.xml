@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">Identity Android</string>
     <string name="i_m_the_demo_app">I\'m the demo app</string>
-    <string name="get_keys">Get keys</string>
+    <string name="show_current_keys">Show current keys</string>
+    <string name="logout">Log out</string>
 </resources>

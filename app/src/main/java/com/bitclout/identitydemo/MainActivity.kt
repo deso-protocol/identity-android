@@ -15,6 +15,7 @@ class MainActivity : AppCompatActivity() {
         val view = binding.root
         setContentView(view)
         binding.loginButton.setOnClickListener { Identity.login(this) }
-        binding.getKeysButton.setOnClickListener { binding.keysInfo.text = Identity.getLoggedInKeys().joinToString(",") }
+        binding.logoutButton.setOnClickListener { Identity.logout(binding.logoutKey.text.toString()) }
+        binding.getKeysButton.setOnClickListener { binding.keysInfo.setText(Identity.getLoggedInKeys().joinToString(",")) }
     }
 }

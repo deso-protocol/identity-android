@@ -26,6 +26,7 @@ object Identity {
      */
     fun logout(publicKey: String): List<String> {
         keyStore.removeDerivedKeyInfo(publicKey)
+        keyStore.setStoredKeys(getLoggedInKeys().filterNot { it == publicKey })
         // Question: when an account is logged out, presumably we also need to delete any shared secrets relating to its private key?
         return keyStore.getAllStoredKeys()
     }
