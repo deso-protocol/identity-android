@@ -1,21 +1,22 @@
 package com.bitclout.identity
 
 import android.content.Context
+import com.bitclout.identity.workers.AuthWorker
 import com.bitclout.identity.workers.KeyInfoStorageWorker
 
 object Identity {
 
     private var applicationContext: Context? = null
-    private lateinit var keyStore: KeyInfoStorageWorker
+    lateinit var keyStore: KeyInfoStorageWorker
+    private val authWorker = AuthWorker()
 
     fun initialize(context: Context) {
         applicationContext = context
         keyStore = KeyInfoStorageWorker(context)
     }
 
-
-    fun login() {
-//        authWorker.presentAuthSession(context: context, with: completion)
+    fun login(context: Context) {
+        authWorker.navigateToLogin(context)
     }
 
     /**
