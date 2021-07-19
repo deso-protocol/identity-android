@@ -46,6 +46,8 @@ class KeyInfoStorageWorker constructor(applicationContext: Context) {
 
     fun clearAllStoredInfo() = sharedPreferences.edit().clear().apply()
 
+    fun jwt(publicKey: String): String? = loadDerivedKeyInfo(publicKey)?.jwt
+
     companion object {
         internal const val PREF_FILE_NAME = "bitclout_identity_pref_file"
 

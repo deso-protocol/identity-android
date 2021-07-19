@@ -89,9 +89,8 @@ object Identity {
     - Returns: A base64 JWT string
     - Throws: Error if the publicKey is not logged in
      */
-    fun jwt(publicKey: String): String {
+    fun jwt(publicKey: String): String? {
         // TODO: Check if logged in and throw error if not
-//        return jwtWorker.getJWT(publicKey)
-        return ""
+        return keyStore.jwt(publicKey)
     }
 }
