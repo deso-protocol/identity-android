@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.browser.customtabs.CustomTabsIntent
+import com.bitclout.identity.Identity
 import com.bitclout.identity.R
 import com.bitclout.identity.databinding.ActivityLoginBinding
 import com.bitclout.identity.models.DerivedKeyInfo
@@ -15,7 +16,6 @@ import com.bitclout.identity.workers.KeyInfoStorageWorker
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
-    private val keyInfoStorageWorker = KeyInfoStorageWorker(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,13 +24,18 @@ class LoginActivity : AppCompatActivity() {
         val view = binding.root
         setContentView(view)
         intent?.data?.let { handleLogin(it) }
-        binding.loginButton.setOnClickListener { openIdentityCustomTabForLogin() }
-
+//        binding.loginButton.setOnClickListener { openIdentityCustomTabForLogin() }
     }
 
     private fun handleLogin(loginResponseUri: Uri) {
         Log.d("Handle login", "Returned Uri: $loginResponseUri")
-        DerivedKeyInfo.fromURI(loginResponseUri)?.let { keyInfoStorageWorker.saveDerivedKeyInfo(it) }
+        //TODO: handle multiple accounts coming back once we have the correct URI structure
+        DerivedKeyInfo.fromURI(loginResponseUri)?.let {
+            Identity.keyStore.saveDerivedKeyInfo(it)
+            Identity.keyStore.setStoredKeys(listOf(it.truePublicKey))
+            Log.d("Saved derived key info", "Closing LoginActivity")
+            finish()
+        }
     }
 
     private fun openIdentityCustomTabForLogin() {
