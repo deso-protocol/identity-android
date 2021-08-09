@@ -1,14 +1,20 @@
 package com.bitclout.identity
 
 import android.content.Context
+import com.bitclout.identity.models.EncryptedMessagesThread
+import com.bitclout.identity.models.UnsignedTransaction
 import com.bitclout.identity.workers.AuthWorker
 import com.bitclout.identity.workers.KeyInfoStorageWorker
+import com.bitclout.identity.workers.MessageEncryptionWorker
+import com.bitclout.identity.workers.TransactionSigner
 
 object Identity {
 
     private var applicationContext: Context? = null
     lateinit var keyStore: KeyInfoStorageWorker
     private val authWorker = AuthWorker()
+    private val messageEncryptionWorker = MessageEncryptionWorker()
+    private val transactionSigner = TransactionSigner()
 
     fun initialize(context: Context) {
         applicationContext = context
@@ -47,10 +53,9 @@ object Identity {
     - Parameter transaction: and `UnsignedTransaction` object to be signed
     - Returns: A signed hash of the transaction
      */
-    fun sign(transaction: Any): String {
+    fun sign(transaction: UnsignedTransaction): String {
         // TODO: Check if logged in and throw error if not
-//        return transactionSigner.signTransaction(transaction)
-        return ""
+        return transactionSigner.signTransaction(transaction)
     }
 
     /**
@@ -62,12 +67,11 @@ object Identity {
     - Returns: A dictionary with keys of the publicKeys of the threads and values of the messages contained in the thread, in the order they were sent
      */
     fun decrypt(
-        threads: List<Any>,
+        threads: List<EncryptedMessagesThread>,
         myPublicKey: String,
         errorOnFailure: Boolean = false
     ): Map<String, List<String>> {
-//        return try messageDecrypter.decryptThreads(threads, myPublicKey, errorOnFailure)
-        return emptyMap()
+        return messageEncryptionWorker.decryptThreads(threads, myPublicKey, errorOnFailure)
     }
 
     /**
@@ -78,9 +82,25 @@ object Identity {
     - errorOnFailure: true if failure to decrypt messages should return an error, false if messages which cannot be decrypted should just be ommitted from the results
     - Returns: An array of decrypted message strings in the order they were sent
      */
-    fun decrypt(thread: Any, myPublicKey: String, errorOnFailure: Boolean = false): List<String> {
-//        return try messageDecrypter.decryptThread(thread, myPublicKey, errorOnFailure)
-        return emptyList()
+    fun decrypt(
+        thread: EncryptedMessagesThread,
+        myPublicKey: String,
+        errorOnFailure: Boolean = false
+    ): List<String> {
+        return messageEncryptionWorker.decryptThread(thread, myPublicKey, errorOnFailure)
+    }
+
+    /**
+    Encrypt private message
+    - Parameters:
+    - message: A message string to be encrypted
+    - myPublicKey: The public key of the calling user's account
+    - Returns: Encrypted message string
+     */
+    fun encrypt(message: String, myPublicKey: String, recipientPublicKey: String): String {
+        //TODO: get shared secret for conversation from storage
+        val sharedSecret = "placeholdersharedsecret"
+        return messageEncryptionWorker.encrypt(message, sharedSecret)
     }
 
     /**
