@@ -3,4 +3,6 @@
     <string name="i_m_the_demo_app">I\'m the demo app</string>
     <string name="show_current_keys">Show current keys</string>
     <string name="logout">Log out</string>
+    <string name="encrypt">Encrypt</string>
+    <string name="output">Output</string>
 </resources>
