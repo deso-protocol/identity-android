@@ -1,7 +1,17 @@
 package com.deso.identity.workers.crypto
 
+import com.deso.identity.decodeHex
+import com.deso.identity.toHex
 import com.deso.identity.models.CryptoException
+import org.bouncycastle.asn1.ASN1Integer
+import org.bouncycastle.asn1.DERSequenceGenerator
 import org.bouncycastle.asn1.sec.ECPrivateKey
+import org.bouncycastle.asn1.sec.SECNamedCurves
+import org.bouncycastle.crypto.digests.SHA256Digest
+import org.bouncycastle.crypto.params.ECDomainParameters
+import org.bouncycastle.crypto.params.ECPrivateKeyParameters
+import org.bouncycastle.crypto.signers.ECDSASigner
+import org.bouncycastle.crypto.signers.HMacDSAKCalculator
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.ECPointUtil
 import org.bouncycastle.jce.provider.BouncyCastleProvider
@@ -9,6 +19,8 @@ import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec
 import org.bouncycastle.jce.spec.ECNamedCurveSpec
 import org.bouncycastle.jce.spec.ECParameterSpec
 import org.bouncycastle.math.ec.ECPoint
+import java.io.ByteArrayOutputStream
+import java.io.IOException
 import java.math.BigInteger
 import java.security.*
 import javax.crypto.Cipher
@@ -57,7 +69,6 @@ object ECIES {
     ECDSA
      */
     fun sign(privateKeyData: ByteArray, message: ByteArray): ByteArray {
-        if (privateKeyData.count() != 32) throw CryptoException.BadPrivateKeyException()
         if (message.count() <= 0) throw CryptoException.EmptyMessageException()
         if (message.count() > 32) throw CryptoException.MessageTooLongException()
         val keyFactory = KeyFactory.getInstance("EC")
@@ -73,6 +84,55 @@ object ECIES {
                 update(message)
             }
         return signer.sign()
+    }
+
+    private fun signDeterministic(privateKeyData: ByteArray, message: ByteArray): ByteArray {
+        if (message.count() <= 0) throw CryptoException.EmptyMessageException()
+        if (message.count() > 32) throw CryptoException.MessageTooLongException()
+        val signer = ECDSASigner(HMacDSAKCalculator(SHA256Digest()))
+        val curve = SECNamedCurves.getByName(SECP256K1)
+        val domain = ECDomainParameters(curve.curve, curve.g, curve.n, curve.h)
+        signer.init(true, ECPrivateKeyParameters(BigInteger(privateKeyData), domain))
+        val signature = signer.generateSignature(message)
+        val baos = ByteArrayOutputStream()
+        return try {
+            val seq = DERSequenceGenerator(baos)
+            seq.addObject(ASN1Integer(signature[0]))
+            seq.addObject(ASN1Integer((signature[1])))
+            seq.close()
+            baos.toByteArray()
+        } catch (e: IOException) {
+            ByteArray(0)
+        }
+    }
+
+    fun signTransaction(seedHex: String, transactionHex: String): String {
+        val privateKey = BigInteger(seedHex, 16).toByteArray()
+        val transactionBytes = transactionHex.decodeHex()
+        val intermediateHash = sha256(transactionBytes)
+        val transactionHash = sha256(intermediateHash)
+        val signatureBytes = signDeterministic(privateKey, transactionHash)
+        val signatureLength = uvarint64ToByteArray(signatureBytes.count())
+        // Drop last byte. This slice is bad. We need to remove the existing signature length field prior to appending the new one.
+        // Once we have frontend transaction construction we won't need to do this.
+        val slicedTransactionBytes: ByteArray =
+            transactionBytes.sliceArray(0 until transactionBytes.count() - 1)
+        val signedTransactionBytes = slicedTransactionBytes + signatureLength + signatureBytes
+        return signedTransactionBytes.toHex()
+    }
+
+    private fun uvarint64ToByteArray(uint: Int): ByteArray {
+        val maxSize = 10
+        val result = ByteArray(maxSize)
+        var index = 0
+        var uintOut = uint
+        while (uintOut >= 0x80) {
+            result[index] = ((uintOut and 0xFF) or 0x80).toByte()
+            uintOut = uintOut ushr 7
+            index++
+        }
+        result[index] = (uintOut or 0).toByte()
+        return result.sliceArray(0..index)
     }
 
     /**
@@ -122,9 +182,7 @@ object ECIES {
         // check HMAC
         val px = derive(privateKey, ephemPublicKey)
         val hash = kdf(px, 32)
-        val sha = MessageDigest.getInstance("SHA-256")
-        sha.update(hash.sliceArray(16..hash.lastIndex))
-        val macKey = sha.digest()
+        val macKey = sha256(hash.sliceArray(16..hash.lastIndex))
         if (!hmacSha256Sign(
                 macKey,
                 cipherAndIv
@@ -134,6 +192,12 @@ object ECIES {
         val encryptionKeyArray = hash.sliceArray(0..15)
         val encryptionKey = SecretKeySpec(encryptionKeyArray, SECP256K1)
         return performAesCtr(iv, encryptionKey, cipherText, Cipher.DECRYPT_MODE)
+    }
+
+    private fun sha256(input: ByteArray): ByteArray {
+        shaDigest.reset()
+        shaDigest.update(input)
+        return shaDigest.digest()
     }
 
     /**

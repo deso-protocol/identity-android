@@ -1,5 +1,6 @@
 package com.deso.identity.workers.crypto
 
+import com.deso.identity.decodeHex
 import com.deso.identity.workers.crypto.ECIES.randomBytes
 import org.junit.Test
 import org.junit.jupiter.api.Assertions.*
@@ -7,6 +8,8 @@ import java.math.BigInteger
 import java.util.*
 
 class ECIESTest {
+
+    val testSeedHex = "db24537899d239c5dbdca9d6d04c1cf14495fcdc4ca10b59223436f2156353ea"
 
     @Test
     fun `Can create random bytes of given length`() {
@@ -82,6 +85,14 @@ class ECIESTest {
     }
 
     @Test
+    fun `Can sign a transaction and get an expected signed transaction hex`() {
+        val inputHex = "01a148417f141e8bb5c59199d7ce3c9cf45abc31e8b1e216155daf677ac2a5805e000102f7e21a74c969d75e708391427a19e627f44731a0a63d0cd114f63b96a12d3442dfe13c0a21e17f98384111c7aec62640e80e6918893269e91264e35c7a2db2d2afd351d64f002102f7e21a74c969d75e708391427a19e627f44731a0a63d0cd114f63b96a12d34420000"
+        val expected = "01a148417f141e8bb5c59199d7ce3c9cf45abc31e8b1e216155daf677ac2a5805e000102f7e21a74c969d75e708391427a19e627f44731a0a63d0cd114f63b96a12d3442dfe13c0a21e17f98384111c7aec62640e80e6918893269e91264e35c7a2db2d2afd351d64f002102f7e21a74c969d75e708391427a19e627f44731a0a63d0cd114f63b96a12d344200483046022100f8008f90549a3a5bac59b10e1162665e4039877a107cceaa10f7c59f9b026b1c022100930b5b4e20af40414543afcec42f1966d92aac92eb310565c58de465329131a6"
+        val actual = ECIES.signTransaction(testSeedHex, inputHex)
+        assertEquals(expected, actual)
+    }
+
+    @Test
     fun `Can verify data that has been signed by a private key`() {
         val keyPair = getRandomKeypair()
         val data = randomBytes(32)
@@ -110,12 +121,5 @@ class ECIESTest {
         val privateKey = BigInteger(private).toByteArray()
         val publicK = ECIES.getPublicKeyFromECPrivateKey(privateKey)
         return Pair(privateKey, publicK)
-    }
-
-    private fun String.decodeHex(): ByteArray {
-        check(length % 2 == 0) { "Must have an even length" }
-        return chunked(2)
-            .map { it.toInt(16).toByte() }
-            .toByteArray()
     }
 }
