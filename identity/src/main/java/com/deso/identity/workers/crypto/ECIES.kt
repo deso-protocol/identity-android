@@ -29,17 +29,14 @@ import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
 
-object ECIES {
+class ECIES {
 
     init {
         Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME);
         Security.addProvider(BouncyCastleProvider())
     }
 
-    const val SECP256K1 = "secp256k1"
-    private const val HMACSHA256 = "HmacSHA256"
-    private val ecSpec: ECNamedCurveParameterSpec = ECNamedCurveTable.getParameterSpec(SECP256K1)
-    private const val useCompressedPointEncoding: Boolean = false
+    private val ecSpec: ECNamedCurveParameterSpec = ECNamedCurveTable.getParameterSpec(Companion.SECP256K1)
     private val shaDigest = MessageDigest.getInstance("SHA-256")
 
     fun randomBytes(number: Int): ByteArray {
@@ -58,7 +55,7 @@ object ECIES {
     Obtain the public elliptic curve SECP256K1 key from a private
      */
     fun getPublicKeyFromECPrivateKey(privateKey: ByteArray): ByteArray {
-        val ecSpec: ECNamedCurveParameterSpec = ECNamedCurveTable.getParameterSpec(SECP256K1)
+        val ecSpec: ECNamedCurveParameterSpec = ECNamedCurveTable.getParameterSpec(Companion.SECP256K1)
         val ecPrivateKey = ECPrivateKey(256, BigInteger(1, privateKey))
         val pointQ: ECPoint = ecSpec.g.multiply(ecPrivateKey.key)
         val useCompressedPointEncoding = false
@@ -72,7 +69,7 @@ object ECIES {
         if (message.count() <= 0) throw CryptoException.EmptyMessageException()
         if (message.count() > 32) throw CryptoException.MessageTooLongException()
         val keyFactory = KeyFactory.getInstance("EC")
-        val ecParameterSpec: ECParameterSpec = ECNamedCurveTable.getParameterSpec(SECP256K1)
+        val ecParameterSpec: ECParameterSpec = ECNamedCurveTable.getParameterSpec(Companion.SECP256K1)
         val privateKeySpec = org.bouncycastle.jce.spec.ECPrivateKeySpec(
             BigInteger(1, privateKeyData),
             ecParameterSpec
@@ -90,7 +87,7 @@ object ECIES {
         if (message.count() <= 0) throw CryptoException.EmptyMessageException()
         if (message.count() > 32) throw CryptoException.MessageTooLongException()
         val signer = ECDSASigner(HMacDSAKCalculator(SHA256Digest()))
-        val curve = SECNamedCurves.getByName(SECP256K1)
+        val curve = SECNamedCurves.getByName(Companion.SECP256K1)
         val domain = ECDomainParameters(curve.curve, curve.g, curve.n, curve.h)
         signer.init(true, ECPrivateKeyParameters(BigInteger(privateKeyData), domain))
         val signature = signer.generateSignature(message)
@@ -143,7 +140,7 @@ object ECIES {
         if (message.count() <= 0) throw CryptoException.EmptyMessageException()
         if (message.count() > 32) throw CryptoException.MessageTooLongException()
         val keyFactory = KeyFactory.getInstance("EC")
-        val namedCurveSpec = ECNamedCurveSpec(SECP256K1, ecSpec.curve, ecSpec.g, ecSpec.n)
+        val namedCurveSpec = ECNamedCurveSpec(Companion.SECP256K1, ecSpec.curve, ecSpec.g, ecSpec.n)
         val point: java.security.spec.ECPoint =
             ECPointUtil.decodePoint(namedCurveSpec.curve, publicKey)
         val pubKeySpec = java.security.spec.ECPublicKeySpec(point, namedCurveSpec)
@@ -165,6 +162,11 @@ object ECIES {
         return decrypt(sharedPrivateKey, encrypted)
     }
 
+    fun decryptShared(privateKeyUserOne: ByteArray, publicKeyUserTwo: ByteArray, encrypted: ByteArray): ByteArray {
+        val sharedPx = derive(privateKeyUserOne, publicKeyUserTwo)
+        return decryptShared(sharedPx, encrypted)
+    }
+
     /**
     Decrypt serialised AES-128-CTR
      */
@@ -181,6 +183,7 @@ object ECIES {
         val msgMac = encrypted.sliceArray(65 + ivLength + cipherTextLength..encrypted.lastIndex)
         // check HMAC
         val px = derive(privateKey, ephemPublicKey)
+
         val hash = kdf(px, 32)
         val macKey = sha256(hash.sliceArray(16..hash.lastIndex))
         if (!hmacSha256Sign(
@@ -190,11 +193,11 @@ object ECIES {
         ) throw CryptoException.IncorrectMACException()
 
         val encryptionKeyArray = hash.sliceArray(0..15)
-        val encryptionKey = SecretKeySpec(encryptionKeyArray, SECP256K1)
+        val encryptionKey = SecretKeySpec(encryptionKeyArray, Companion.SECP256K1)
         return performAesCtr(iv, encryptionKey, cipherText, Cipher.DECRYPT_MODE)
     }
 
-    private fun sha256(input: ByteArray): ByteArray {
+    fun sha256(input: ByteArray): ByteArray {
         shaDigest.reset()
         shaDigest.update(input)
         return shaDigest.digest()
@@ -235,21 +238,19 @@ object ECIES {
         val ephemeralPrivateKey = randomBytes(32)
         val ephemeralPublicKey = getPublicKeyFromECPrivateKey(ephemeralPrivateKey)
         val iv = randomBytes(16)
-
         val sharedPx = derive(ephemeralPrivateKey, publicKeyTo)
         val hash = kdf(sharedPx, 32)
         val encryptionKeyArray = hash.sliceArray(0..15)
         val sha = MessageDigest.getInstance("SHA-256")
         sha.update(hash.sliceArray(16..hash.lastIndex))
         val macKey = sha.digest()
-        val encryptionKey = SecretKeySpec(encryptionKeyArray, SECP256K1)
+        val encryptionKey = SecretKeySpec(encryptionKeyArray, Companion.SECP256K1)
         val cipherText = performAesCtr(iv, encryptionKey, message, Cipher.ENCRYPT_MODE)
         val dataToMac = iv + cipherText
         val hmac = hmacSha256Sign(macKey, dataToMac)
         return ephemeralPublicKey + iv + cipherText + hmac
     }
 
-    // TODO: check NoPadding is correct.
     private fun performAesCtr(
         iv: ByteArray,
         key: Key,
@@ -270,14 +271,15 @@ object ECIES {
         val keyA = BigInteger(1, privateKeyA)
         val curve = ecSpec.curve
         val keyB = curve.decodePoint(publicKeyB)
-        val derivedPoint = curve.multiplier.multiply(keyB, keyA)
-        return derivedPoint.getEncoded(useCompressedPointEncoding)
+        val derivedPoint = keyB.multiply(keyA)
+        return derivedPoint.normalize().affineXCoord.encoded
     }
 
     private fun kdf(secret: ByteArray, outputLength: Int): ByteArray {
         var ctr = 1
         var written = 0
         var result = ByteArray(0)
+        shaDigest.reset()
         while (written < outputLength) {
             val byteFunction = { index: Int ->
                 when (index) {
@@ -298,10 +300,15 @@ object ECIES {
     }
 
     private fun hmacSha256Sign(key: ByteArray, message: ByteArray): ByteArray {
-        val sha256HMAC = Mac.getInstance(HMACSHA256)
-        val secretKey = SecretKeySpec(key, HMACSHA256)
+        val sha256HMAC = Mac.getInstance(Companion.HMACSHA256)
+        val secretKey = SecretKeySpec(key, Companion.HMACSHA256)
         sha256HMAC.init(secretKey)
         return sha256HMAC.doFinal(message)
+    }
+
+    companion object {
+        const val SECP256K1 = "secp256k1"
+        private const val HMACSHA256 = "HmacSHA256"
     }
 
 }

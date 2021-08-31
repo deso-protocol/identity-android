@@ -4,15 +4,15 @@
     package="com.deso.identity">
 
     <application>
-        <activity android:name="com.deso.identity.views.LoginActivity">
+        <activity android:name="com.deso.identity.views.WebAppHandlerActivity">
             <intent-filter >
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="login"
-                    android:scheme="identity" />
+                    android:host="app"
+                    android:scheme="${applicationId}.identity" />
             </intent-filter>
         </activity>
         <provider

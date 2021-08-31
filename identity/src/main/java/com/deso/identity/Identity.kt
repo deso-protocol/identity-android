@@ -2,23 +2,26 @@ package com.deso.identity
 
 import android.content.Context
 import com.deso.identity.models.EncryptedMessagesThread
-import com.deso.identity.models.UnsignedTransaction
 import com.deso.identity.workers.AuthWorker
 import com.deso.identity.workers.KeyInfoStorageWorker
 import com.deso.identity.workers.MessageEncryptionWorker
 import com.deso.identity.workers.TransactionSigner
+import com.deso.identity.workers.crypto.ECIES
 
 object Identity {
 
     private var applicationContext: Context? = null
-    lateinit var keyStore: KeyInfoStorageWorker
     private val authWorker = AuthWorker()
-    private val messageEncryptionWorker = MessageEncryptionWorker()
-    private val transactionSigner = TransactionSigner()
+    private val ecies = ECIES()
+    lateinit var keyStore: KeyInfoStorageWorker
+    lateinit var messageEncryptionWorker: MessageEncryptionWorker
+    private lateinit var transactionSigner: TransactionSigner
 
     fun initialize(context: Context) {
         applicationContext = context
         keyStore = KeyInfoStorageWorker(context)
+        messageEncryptionWorker = MessageEncryptionWorker(keyStore, ecies)
+        transactionSigner = TransactionSigner(keyStore, ecies)
     }
 
     fun login(context: Context) {
@@ -33,7 +36,7 @@ object Identity {
     fun logout(publicKey: String): List<String> {
         keyStore.removeDerivedKeyInfo(publicKey)
         keyStore.setStoredKeys(getLoggedInKeys().filterNot { it == publicKey })
-        // Question: when an account is logged out, presumably we also need to delete any shared secrets relating to its private key?
+        //TODO: when an account is logged out, presumably we also need to delete any shared secrets relating to its private key?
         return keyStore.getAllStoredKeys()
     }
 
@@ -53,10 +56,8 @@ object Identity {
     - Parameter transaction: and `UnsignedTransaction` object to be signed
     - Returns: A signed hash of the transaction
      */
-    fun sign(transaction: UnsignedTransaction): String {
-        // TODO: Check if logged in and throw error if not
-        return transactionSigner.signTransaction(transaction)
-    }
+    fun sign(currentUserPublicKey: String, transactionHex: String): String =
+        transactionSigner.signTransaction(currentUserPublicKey, transactionHex)
 
     /**
     Decrypt private messages from a collection of threads
@@ -68,11 +69,10 @@ object Identity {
      */
     fun decrypt(
         threads: List<EncryptedMessagesThread>,
-        myPublicKey: String,
+        currentUserPublicKey: String,
         errorOnFailure: Boolean = false
-    ): Map<String, List<String>> {
-        return messageEncryptionWorker.decryptThreads(threads, myPublicKey, errorOnFailure)
-    }
+    ): Map<String, List<String>> = messageEncryptionWorker.decryptThreads(threads, currentUserPublicKey, errorOnFailure)
+
 
     /**
     Decrypt private messages from a single thread
@@ -86,9 +86,7 @@ object Identity {
         thread: EncryptedMessagesThread,
         myPublicKey: String,
         errorOnFailure: Boolean = false
-    ): List<String> {
-        return messageEncryptionWorker.decryptThread(thread, myPublicKey, errorOnFailure)
-    }
+    ): List<String> = messageEncryptionWorker.decryptThread(thread, myPublicKey, errorOnFailure)
 
     /**
     Encrypt private message
@@ -97,8 +95,9 @@ object Identity {
     - myPublicKey: The public key of the calling user's account
     - Returns: Encrypted message string
      */
-    fun encrypt(message: String, myPublicKey: String, recipientPublicKey: String): String {
+    fun encrypt(message: String, currentUserPublicKey: String, recipientPublicKey: String): String {
         //TODO: get shared secret for conversation from storage
+        // if null, make call to web identity for shared secret and store
         val sharedSecret = "placeholdersharedsecret"
         return messageEncryptionWorker.encrypt(message, sharedSecret)
     }
@@ -109,8 +108,8 @@ object Identity {
     - Returns: A base64 JWT string
     - Throws: Error if the publicKey is not logged in
      */
-    fun jwt(publicKey: String): String? {
+    fun jwt(currentUserPublicKey: String): String? {
         // TODO: Check if logged in and throw error if not
-        return keyStore.jwt(publicKey)
+        return keyStore.jwt(currentUserPublicKey)
     }
 }
