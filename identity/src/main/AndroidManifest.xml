@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.bitclout.identity">
+    package="com.deso.identity">
 
     <application>
-        <activity android:name="com.bitclout.identity.views.LoginActivity">
+        <activity android:name="com.deso.identity.views.LoginActivity">
             <intent-filter >
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -20,7 +20,7 @@
             android:authorities="${applicationId}.androidx-startup"
             android:exported="false"
             tools:node="merge">
-            <meta-data  android:name="com.bitclout.identity.IdentityInitializer"
+            <meta-data  android:name="com.deso.identity.IdentityInitializer"
                 android:value="androidx.startup" />
         </provider>
     </application>
