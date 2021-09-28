@@ -3,7 +3,6 @@ package com.deso.identity.models
 import java.lang.Exception
 
 sealed class IdentityException : Exception() {
-    class MissingPresentationAnchorException : IdentityException()
     class NotLoggedInException : IdentityException()
     class MissingInfoForPublicKeyException : IdentityException()
     class KeyInfoExpiredException : IdentityException()
