@@ -8,6 +8,7 @@ import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import org.junit.Assert.*
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.jupiter.api.Assertions
 import java.util.*
@@ -41,6 +42,7 @@ class MessageEncryptionWorkerTest {
         assertEquals(decryptedMessageOne, decryptedThread?.get(0))
     }
 
+    @Ignore
     @Test
     fun `If shared secret isn't in storage, get from web app`() {
         val ownKey = "OWN KEY"

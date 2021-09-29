@@ -30,7 +30,7 @@ class WebAppHandlerActivity : AppCompatActivity() {
         // split on path for login, signup and shared secrets
         DerivedKeyInfo.fromURI(responseUri)?.let {
             Identity.keyStore.saveDerivedKeyInfo(it)
-            Identity.keyStore.setStoredKeys(listOf(it.truePublicKey))
+            Identity.keyStore.setStoredKeys(listOf(it.publicKey))
             Log.d("Saved derived key info", "Closing WebAppHandlerActivity")
             finish()
         }

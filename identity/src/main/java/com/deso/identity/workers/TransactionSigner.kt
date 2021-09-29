@@ -8,6 +8,6 @@ class TransactionSigner(private val keyStore: KeyInfoStorageWorker, val ecies: E
     fun signTransaction(currentUserPublicKey: String, transactionHex: String): String {
         val derivedKeyInfo = keyStore.loadDerivedKeyInfo(currentUserPublicKey)
             ?: throw IdentityException.NotLoggedInException()
-        return ecies.signTransaction(derivedKeyInfo.newPrivateKey, transactionHex)
+        return ecies.signTransaction(derivedKeyInfo.derivedSeedHex, transactionHex)
     }
 }

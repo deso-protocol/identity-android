@@ -29,7 +29,7 @@ class KeyInfoStorageWorker constructor(private val applicationContext: Context) 
 
     fun saveDerivedKeyInfo(derivedKeyInfo: DerivedKeyInfo) {
         with(sharedPreferences.edit()) {
-            putString(derivedKeyInfo.truePublicKey, derivedKeyInfo.jsonString())
+            putString(derivedKeyInfo.publicKey, derivedKeyInfo.jsonString())
             apply()
         }
     }
