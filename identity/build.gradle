@@ -61,7 +61,7 @@ afterEvaluate {
                 from components.release
                 groupId = 'com.deso'
                 artifactId = 'android-identity'
-                version = '0.1.1'
+                version = '0.1'
             }
         }
     }
