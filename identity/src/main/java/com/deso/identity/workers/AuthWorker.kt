@@ -10,12 +10,10 @@ import kotlin.random.Random
 class AuthWorker {
 
     fun navigateToLogin(context: Context) {
-        val uri: Uri = Uri.parse("http://10.0.2.2:3000")
+        val uri: Uri = Uri.parse("$IDENTITY_BASE_URL/derive")
             .buildUpon()
-            .appendQueryParameter("derive", "true")
-            .appendQueryParameter("version", "1")
+            .appendQueryParameter("webview", "true")
             .appendQueryParameter("callback", "${context.packageName}.identity://app")
-            .appendQueryParameter("state", Random.Default.nextInt(10000).toString())
             .build()
         launchUriInCustomTab(context, uri)
     }
@@ -36,5 +34,9 @@ class AuthWorker {
         val customTabsIntent = CustomTabsIntent.Builder().build()
         customTabsIntent.intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
         customTabsIntent.launchUrl(context, uri)
+    }
+
+    companion object {
+        const val IDENTITY_BASE_URL = "https://identity.bitclout.com"
     }
 }

@@ -29,8 +29,7 @@ class WebAppHandlerActivity : AppCompatActivity() {
         //TODO check outgoing state value against return
         // split on path for login, signup and shared secrets
         DerivedKeyInfo.fromURI(responseUri)?.let {
-            Identity.keyStore.saveDerivedKeyInfo(it)
-            Identity.keyStore.setStoredKeys(listOf(it.publicKey))
+            Identity.completeLogin(it)
             Log.d("Saved derived key info", "Closing WebAppHandlerActivity")
             finish()
         }

@@ -1,7 +1,10 @@
 package com.deso.identity
 
 import android.content.Context
+import com.deso.identity.models.DerivedKeyInfo
 import com.deso.identity.models.EncryptedMessagesThread
+import com.deso.identity.models.LoginResponse
+import com.deso.identity.models.LoginSuccess
 import com.deso.identity.workers.AuthWorker
 import com.deso.identity.workers.KeyInfoStorageWorker
 import com.deso.identity.workers.MessageEncryptionWorker
@@ -13,9 +16,10 @@ object Identity {
     private var applicationContext: Context? = null
     private val authWorker = AuthWorker()
     private val ecies = ECIES()
-    lateinit var keyStore: KeyInfoStorageWorker
-    lateinit var messageEncryptionWorker: MessageEncryptionWorker
+    internal lateinit var keyStore: KeyInfoStorageWorker
+    private lateinit var messageEncryptionWorker: MessageEncryptionWorker
     private lateinit var transactionSigner: TransactionSigner
+    private var pendingLoginCompletion: LoginCompletion? = null
 
     fun initialize(context: Context) {
         applicationContext = context
@@ -24,7 +28,8 @@ object Identity {
         transactionSigner = TransactionSigner(keyStore, ecies)
     }
 
-    fun login(context: Context) {
+    fun login(context: Context, callback: LoginCompletion) {
+        pendingLoginCompletion = callback
         authWorker.navigateToLogin(context)
     }
 
@@ -35,7 +40,6 @@ object Identity {
      */
     fun logout(publicKey: String): List<String> {
         keyStore.removeDerivedKeyInfo(publicKey)
-        keyStore.setStoredKeys(getLoggedInKeys().filterNot { it == publicKey })
         //TODO: when an account is logged out, presumably we also need to delete any shared secrets relating to its private key?
         return keyStore.getAllStoredKeys()
     }
@@ -112,4 +116,12 @@ object Identity {
         // TODO: Check if logged in and throw error if not
         return keyStore.jwt(currentUserPublicKey)
     }
+
+    internal fun completeLogin(loggedInKeyInfo: DerivedKeyInfo) {
+        keyStore.saveDerivedKeyInfo(loggedInKeyInfo)
+        pendingLoginCompletion?.invoke(LoginSuccess(loggedInKeyInfo.publicKey, keyStore.getAllStoredKeys()))
+        pendingLoginCompletion = null
+    }
 }
+
+typealias LoginCompletion = (LoginResponse) -> Void

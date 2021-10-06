@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedFile
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.deso.identity.Identity
 import com.deso.identity.models.DerivedKeyInfo
 import com.deso.identity.models.SharedSecret
 import org.json.JSONArray
@@ -32,6 +33,8 @@ class KeyInfoStorageWorker constructor(private val applicationContext: Context) 
             putString(derivedKeyInfo.publicKey, derivedKeyInfo.jsonString())
             apply()
         }
+        val existingKeys = getAllStoredKeys()
+        setStoredKeys(existingKeys.plus(derivedKeyInfo.publicKey))
     }
 
     fun removeDerivedKeyInfo(truePublicKey: String) {
@@ -39,6 +42,7 @@ class KeyInfoStorageWorker constructor(private val applicationContext: Context) 
             remove(truePublicKey)
             apply()
         }
+        setStoredKeys(Identity.getLoggedInKeys().filterNot { it == truePublicKey })
     }
 
     fun loadDerivedKeyInfo(truePublicKey: String): DerivedKeyInfo? {
@@ -48,7 +52,7 @@ class KeyInfoStorageWorker constructor(private val applicationContext: Context) 
         }
     }
 
-    fun setStoredKeys(publicKeys: List<String>) =
+    private fun setStoredKeys(publicKeys: List<String>) =
         sharedPreferences.edit().putStringSet(PUBLIC_KEYS, publicKeys.toSet()).apply()
 
     fun getAllStoredKeys(): List<String> =
